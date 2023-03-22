@@ -12,7 +12,7 @@ To install this macro, follow these steps:
 
 3. Enter the following command in the Command Window:
 
-   ```pml
+   ```pml2
    pml rehash all
    ```
 
@@ -24,17 +24,16 @@ String method returns the JSON string of the specified object.
 
 - Example:
 
-  ```pml
+  ```pml2
   !json = object JSON()
-  !obj = object POSITION('E 100mm N 200mm U 300mm WRT /*')
-  !result = !json.String(!obj)
+  !result = !json.String( N WRT /* )
   $P$!result
   ```
 
 - Result in the console:
 
   ```json
-  {"east":100,"north":200,"origin":"/*","up":300}
+  {"east":0,"north":1,"origin":"/*","up":0}
   ```
 
 ### `.Lines(!object is ANY) is ARRAY`
@@ -43,7 +42,7 @@ Lines method returns an array of the indented JSON strings from the specified ob
 
 - Example:
 
-  ```pml
+  ```pml2
   !file = object FILE('%temp%\sample.json')
   !json = object JSON()
   !obj = object VOLUME('E 100mm N 200mm U 300mm WRT /* TO E 400mm N 500mm U 600mm WRT /*')
@@ -75,7 +74,7 @@ Lines method returns an array of the indented JSON strings from the specified ob
 
 - Example:
 
-  ```pml
+  ```pml2
   !file = object FILE('%temp%\sample.json')
   !json = object JSON()
   !obj = object VOLUME('E 100mm N 200mm U 300mm WRT /* TO E 400mm N 500mm U 600mm WRT /*')
@@ -107,7 +106,7 @@ Parse method parses a JSON string and stores the result in the specified object.
 
 - Example:
 
-  ```pml
+  ```pml2
   !json = object JSON()
   !obj = object POSITION()
   !json.Parse('{"east":100,"north":200,"up":300,"origin":"/*"}', !obj)
@@ -130,7 +129,7 @@ Parse method parses an array of JSON strings and stores the result in the specif
 
 - Example:
 
-  ```pml
+  ```pml2
   !json = object JSON()
   !file = object FILE('%temp%\sample.json')
   !obj = object DICTIONARY()
