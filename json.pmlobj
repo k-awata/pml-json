@@ -1,0 +1,364 @@
+-- Copyright (c) 2023 K.Awata
+-- 
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+-- 
+-- The above copyright notice and this permission notice shall be included in all
+-- copies or substantial portions of the Software.
+-- 
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+-- SOFTWARE.
+
+-- JSON object provides functionality to encode PML objects to JSON strings and decode JSON strings to PML objects.
+define object JSON
+    -- All members are for internal use.
+    member .lines is ARRAY
+    member .buf   is STRING
+    member .comp  is BOOLEAN
+    member .instr is STRING
+    member .indpt is REAL
+    member .row   is REAL
+    member .col   is REAL
+    member .prevr is REAL
+    member .prevc is REAL
+endobject
+
+-- String method returns the JSON string of the specified object.
+define method .String(!object is ANY) is STRING
+    !this.buf = ''
+    !this.comp = true
+    !this.indpt = 0
+    !this.stringify(!object)
+    !result = !this.buf
+    return !result
+endmethod
+
+-- Lines method returns an array of the indented JSON strings from the specified object.
+define method .Lines(!object is ANY) is ARRAY
+    return !this.Lines(!object, '  ')
+endmethod
+
+-- Lines method returns an array of the indented JSON strings from the specified object with the specified indent string.
+define method .Lines(!object is ANY, !indent is STRING) is ARRAY
+    !this.lines = object ARRAY()
+    !this.buf = ''
+    !this.comp = false
+    !this.instr = !indent
+    !this.indpt = 0
+    !this.stringify(!object)
+    !this.writeLf()
+    !result = !this.lines
+    return !result
+endmethod
+
+-- Parse method parses a JSON string and stores the result in the specified object.
+define method .Parse(!json is STRING, !object is ANY)
+    !this.Parse(!json.Split('
+'), !object)
+endmethod
+
+-- Parse method parses an array of JSON strings and stores the result in the specified object.
+define method .Parse(!json is ARRAY, !object is ANY)
+    !this.lines = !json
+    !this.row = 1
+    !this.col = 0
+    !object = !this.parseValue(!object.ObjectType())
+endmethod
+
+-- All methods below are for internal use.
+define method .write(!s is STRING)
+    !this.buf = !this.buf + !s
+endmethod
+
+define method .writeSpace()
+    if !this.comp then
+        return
+    endif
+    !this.write(' ')
+endmethod
+
+define method .writeIndent()
+    if !this.comp then
+        return
+    endif
+    do !i to !this.indpt
+        !this.write(!this.instr)
+    enddo
+endmethod
+
+define method .writeLf()
+    if !this.comp then
+        return
+    endif
+    !this.lines.Append(!this.buf)
+    !this.buf = ''
+endmethod
+
+define method .stringify(!object is ANY)
+    !type = !object.ObjectType()
+    if !object.Unset() then
+        !this.write('null')
+    elseif !type eq 'STRING' then
+        !this.write('"')
+        !this.write(!object.Replace('\', '\\').Replace('"', '\"').Replace('	', '\t').Replace('
+', '\n'))
+        !this.write('"')
+    elseif !type eq 'BOOLEAN' then
+        !this.write(!object.String().LowCase())
+    elseif !type eq 'REAL' then
+        !this.write(!object.Value().String().Replace('EX', 'E'))
+    elseif !type eq 'DBREF' then
+        !this.stringify(!object.name)
+    elseif !type eq 'ARRAY' then
+        !this.write('[')
+        !first = true
+        !this.indpt = !this.indpt + 1
+        do !value values !object
+            if !first then
+                !first = false
+            else
+                !this.write(',')
+            endif
+            !this.writeLf()
+            !this.writeIndent()
+            !this.stringify(!value)
+        enddo
+        !this.indpt = !this.indpt - 1
+        !this.writeLf()
+        !this.writeIndent()
+        !this.write(']')
+    elseif !type eq 'DICTIONARY' then
+        !this.write('{')
+        !first = true
+        !this.indpt = !this.indpt + 1
+        do !i indices !object.keys
+            if !first then
+                !first = false
+            else
+                !this.write(',')
+            endif
+            !this.writeLf()
+            !this.writeIndent()
+            !this.stringify(!object.keys[!i])
+            !this.write(':')
+            !this.writeSpace()
+            !this.stringify(!object.values[!i])
+        enddo
+        !this.indpt = !this.indpt - 1
+        !this.writeLf()
+        !this.writeIndent()
+        !this.write('}')
+    else
+        !keys = !object.Attributes()
+        handle any
+            !this.stringify(!object.String())
+            return
+        endhandle
+        !this.write('{')
+        !first = true
+        !this.indpt = !this.indpt + 1
+        do !key values !keys
+            if !first then
+                !first = false
+            else
+                !this.write(',')
+            endif
+            !this.writeLf()
+            !this.writeIndent()
+            !this.stringify(!key.LowCase())
+            !this.write(':')
+            !this.writeSpace()
+            !this.stringify(!object.Attribute(!key))
+        enddo
+        !this.indpt = !this.indpt - 1
+        !this.writeLf()
+        !this.writeIndent()
+        !this.write('}')
+    endif
+endmethod
+
+define method .readChar() is STRING
+    !this.prevr = !this.row
+    !this.prevc = !this.col
+    do
+        !this.col = !this.col + 1
+        break if !this.col le !this.lines[!this.row].Length()
+        !this.row = !this.row + 1
+        !this.col = 0
+        if !this.row gt !this.lines.Size() then
+            return object STRING()
+        endif
+    enddo
+    return !this.lines[!this.row].Substring(!this.col, 1)
+endmethod
+
+define method .backtrack()
+    !this.row = !this.prevr
+    !this.col = !this.prevc
+endmethod
+
+define method .skipSpace()
+    do
+        break if not !this.readChar() inset(' ', '	')
+    enddo
+    !this.backtrack()
+endmethod
+
+define method .parseValue(!type is STRING) is ANY
+    !this.skipSpace()
+    !char = !this.readChar()
+    !this.backtrack()
+    if !char eq '{' then
+        return !this.parseObject(!type)
+    elseif !char eq '[' then
+        return !this.parseArray()
+    elseif !char eq '"' then
+        return !this.parseString(!type)
+    elseif !char eq 'n' then
+        return !this.parseNull(!type)
+    elseif !char inset('t', 'f') then
+        return !this.parseBoolean()
+    elseif !char inset('-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9') then
+        return !this.parseNumber()
+    endif
+    return error 1 'JSON parse error: unexpected character'
+endmethod
+
+define method .parseObject(!type is STRING) is ANY
+    if !this.readChar() ne '{' then
+        return error 11 'JSON parse error: expected "{"'
+    endif
+    !this.skipSpace()
+    !char = !this.readChar()
+    !this.backtrack()
+    if !type eq '' then
+        !object = object DICTIONARY()
+    else
+        !object = object $!<type>()
+    endif
+    if !char eq '}' then
+        return !object
+    endif
+    do
+        !this.skipSpace()
+        !key = !this.parseString('STRING')
+        !this.skipSpace()
+        if !this.readChar() ne ':' then
+            return error 13 'JSON parse error: expected ":"'
+        endif
+        if !type inset('', 'DICTIONARY') then
+            !object.setValue(!key, !this.parseValue(''), true)
+        else
+            !object.$!<key> = !this.parseValue(!object.$!<key>.ObjectType())
+        endif
+        !this.skipSpace()
+        !char = !this.readChar()
+        break if !char eq '}'
+        if !char ne ',' then
+            return error 12 'JSON parse error: expected "," or "}"'
+        endif
+    enddo
+    return !object
+endmethod
+
+define method .parseArray() is ARRAY
+    if !this.readChar() ne '[' then
+        return error 21 'JSON parse error: expected "["'
+    endif
+    !this.skipSpace()
+    !char = !this.readChar()
+    !this.backtrack()
+    !array = object ARRAY()
+    if !char eq ']' then
+        return !array
+    endif
+    do
+        !array.Append(!this.parseValue(''))
+        !this.skipSpace()
+        !char = !this.readChar()
+        break if !char eq ']'
+        if !char ne ',' then
+            return error 22 'JSON parse error: expected "," or "]"'
+        endif
+    enddo
+    return !array
+endmethod
+
+define method .parseString(!type is STRING) is ANY
+    if !this.readChar() ne '"' then
+        return error 31 'JSON parse error: expected "'
+    endif
+    !token = ''
+    do
+        !char = !this.readChar()
+        if !char.Unset() then
+            return error 32 'JSON parse error: unexpected end of data'
+        elseif !char eq '"' then
+            break
+        elseif !char eq '\' then
+            !char = !this.readChar()
+            if !char eq 'n' then
+                !char = '
+'
+            elseif !char eq 't' then
+                !char = '	'
+            endif
+        endif
+        !token = !token + !char
+    enddo
+    if !type inset('', 'STRING') then
+        return !token
+    endif
+    return object $!<type>(!token)
+endmethod
+
+define method .parseNull(!type is STRING) is ANY
+    !token = ''
+    do
+        !char = !this.readChar()
+        break if not !char inset('n', 'u', 'l')
+        !token = !token + !char
+    enddo
+    if !token ne 'null' then
+        return error 41 'JSON parse error: unexpected keyword'
+    endif
+    !this.backtrack()
+    if !type eq '' then
+        return object STRING()
+    endif
+    return object $!<type>()
+endmethod
+
+define method .parseBoolean() is BOOLEAN
+    !token = ''
+    do
+        !char = !this.readChar()
+        break if not !char inset('t', 'r', 'u', 'e', 'f', 'a', 'l', 's')
+        !token = !token + !char
+    enddo
+    if not !token inset('true', 'false') then
+        return error 51 'JSON parse error: unexpected keyword'
+    endif
+    !this.backtrack()
+    return !token.Boolean()
+endmethod
+
+define method .parseNumber() is REAL
+    !token = ''
+    do
+        !char = !this.readChar()
+        break if not !char inset('-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'E', 'e', '+')
+        !token = !token + !char
+    enddo
+    !this.backtrack()
+    return !token.Real()
+endmethod

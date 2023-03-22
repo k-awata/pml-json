@@ -1,0 +1,255 @@
+define object jsonTest
+endobject
+
+define method .testStringNull(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('null', !json.String(object REAL()))
+endmethod
+
+define method .testStringString(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('"foo bar"', !json.String('foo bar'))
+endmethod
+
+define method .testStringStringMetaChars(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('"foo\\\"bar\"\tbaz\nfoobar"', !json.String('foo\"bar"	baz
+foobar'))
+endmethod
+
+define method .testStringBooleanTrue(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('true', !json.String(TRUE))
+endmethod
+
+define method .testStringBooleanFalse(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('false', !json.String(FALSE))
+endmethod
+
+define method .testStringNumberInteger(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('123', !json.String(123))
+endmethod
+
+define method .testStringNumberNegative(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('-123', !json.String(-123))
+endmethod
+
+define method .testStringNumberDecimal(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('0.123', !json.String(0.123))
+endmethod
+
+define method .testStringNumberExPos(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('0.123E+20', !json.String(12300000000000000000))
+endmethod
+
+define method .testStringNumberExNeg(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('0.123E-20', !json.String(0.00000000000000000000123))
+endmethod
+
+define method .testStringDBRef(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('"/*"', !json.String( /* ))
+endmethod
+
+define method .testStringArray(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('["foo","bar","baz"]', !json.String(Split('foo bar baz')))
+endmethod
+
+define method .testStringDictionary(!assert is PmlAssert)
+    !json = object JSON()
+    !dict = object DICTIONARY()
+    !dict.keys = Split('one two three')
+    !dict.values = Split('foo bar baz')
+    !assert.equal('{"one":"foo","two":"bar","three":"baz"}', !json.String(!dict))
+endmethod
+
+define method .testStringObject(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('{"east":0,"north":0,"origin":"/*","up":1}', !json.String( U WRT /* ))
+endmethod
+
+define method .testStringObjectNoAttrib(!assert is PmlAssert)
+    !json = object JSON()
+    !assert.equal('"temp"', !json.String(object FILE('temp')))
+endmethod
+
+define method .testParseObject(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object DIRECTION()
+    !json.Parse('{"east":0,"north":0,"up":1,"origin":"/*"}', !actual)
+    !assert.equal(object DIRECTION('U WRT /*'), !actual)
+endmethod
+
+define method .testParseObjectFromString(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object FILE()
+    !json.Parse('"temp"', !actual)
+    !assert.equal(object FILE('temp'), !actual)
+endmethod
+
+define method .testParseDictionary(!assert is PmlAssert)
+    !json = object JSON()
+    !expected = object DICTIONARY()
+    !expected.keys = Split('one two three')
+    !expected.values = Split('foo bar baz')
+    !actual = object DICTIONARY()
+    !json.Parse('{"one":"foo","two":"bar","three":"baz"}', !actual)
+    !assert.equal(!expected, !actual)
+endmethod
+
+define method .testParseArray(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object ARRAY()
+    !json.Parse('["foo","bar","baz"]', !actual)
+    !assert.equal(Split('foo bar baz'), !actual)
+endmethod
+
+define method .testParseString(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object STRING()
+    !json.Parse('"foo bar"', !actual)
+    !assert.equal('foo bar', !actual)
+endmethod
+
+define method .testParseStringBackSlash(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object STRING()
+    !json.Parse('"foo\\bar"', !actual)
+    !assert.equal('foo\bar', !actual)
+endmethod
+
+define method .testParseStringQuote(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object STRING()
+    !json.Parse('"foo \"bar\" baz"', !actual)
+    !assert.equal('foo "bar" baz', !actual)
+endmethod
+
+define method .testParseStringTab(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object STRING()
+    !json.Parse('"foo\tbar"', !actual)
+    !assert.equal('foo	bar', !actual)
+endmethod
+
+define method .testParseStringLf(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object STRING()
+    !json.Parse('"foo\nbar"', !actual)
+    !assert.equal('foo
+bar', !actual)
+endmethod
+
+define method .testParseNull(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object REAL()
+    !json.Parse('null', !actual)
+    !assert.isUnset(!actual)
+    !assert.instanceOf(!actual, 'REAL')
+endmethod
+
+define method .testParseNullNoType(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object ARRAY()
+    !json.Parse('[null]', !actual)
+    !assert.isUnset(!actual[1])
+    !assert.instanceOf(!actual[1], 'STRING')
+endmethod
+
+define method .testParseBooleanTrue(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object BOOLEAN()
+    !json.Parse('true', !actual)
+    !assert.isTrue(!actual)
+endmethod
+
+define method .testParseBooleanFalse(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object BOOLEAN()
+    !json.Parse('false', !actual)
+    !assert.isFalse(!actual)
+endmethod
+
+define method .testParseNumberInteger(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object REAL()
+    !json.Parse('123', !actual)
+    !assert.equal(123, !actual)
+endmethod
+
+define method .testParseNumberNegative(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object REAL()
+    !json.Parse('-123', !actual)
+    !assert.equal(-123, !actual)
+endmethod
+
+define method .testParseNumberDecimal(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object REAL()
+    !json.Parse('0.123', !actual)
+    !assert.equal(0.123, !actual)
+endmethod
+
+define method .testParseNumberEx(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object REAL()
+    !json.Parse('123e4', !actual)
+    !assert.equal(1230000, !actual)
+endmethod
+
+define method .testParseNumberExPos(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object REAL()
+    !json.Parse('123e+4', !actual)
+    !assert.equal(1230000, !actual)
+endmethod
+
+define method .testParseNumberExNeg(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object REAL()
+    !json.Parse('123e-4', !actual)
+    !assert.equal(0.0123, !actual)
+endmethod
+
+define method .testLines(!assert is PmlAssert)
+    !json = object JSON()
+    !expected = Split('{
+    "from": {
+        "east": 1000,
+        "north": 2000,
+        "origin": "/*",
+        "up": 3000
+    },
+    "to": {
+        "east": 4000,
+        "north": 5000,
+        "origin": "/*",
+        "up": 6000
+    }
+}', '
+')
+    !actual = !json.Lines(object VOLUME('E 1000mm N 2000mm U 3000mm WRT /* TO E 4000mm N 5000mm U 6000mm WRT /*'), '    ')
+    !assert.equal(!expected, !actual)
+endmethod
+
+define method .testParseFromLines(!assert is PmlAssert)
+    !json = object JSON()
+    !actual = object POSITION()
+    !json.Parse(Split('
+        {
+            "east": 1000,
+            "north": 2000,
+            "up": 3000,
+            "origin": "/*"
+        }', '
+'), !actual)
+    !assert.equal(object POSITION('E 1000mm N 2000mm U 3000mm WRT /*'), !actual)
+endmethod
