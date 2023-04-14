@@ -103,87 +103,122 @@ define method .writeLf()
     !this.buf = ''
 endmethod
 
-define method .stringify(!object is ANY)
-    !type = !object.ObjectType()
+define method .stringify(!object is STRING)
     if !object.Unset() then
         !this.write('null')
-    elseif !type eq 'STRING' then
-        !this.write('"')
-        !this.write(!object.Replace('\', '\\').Replace('"', '\"').Replace('	', '\t').Replace('
-', '\n'))
-        !this.write('"')
-    elseif !type eq 'BOOLEAN' then
-        !this.write(!object.String().LowCase())
-    elseif !type eq 'REAL' then
-        !this.write(!object.Value().String().Replace('EX', 'E'))
-    elseif !type eq 'DBREF' then
-        !this.stringify(!object.name)
-    elseif !type eq 'ARRAY' then
-        !this.write('[')
-        !first = true
-        !this.indpt = !this.indpt + 1
-        do !value values !object
-            if !first then
-                !first = false
-            else
-                !this.write(',')
-            endif
-            !this.writeLf()
-            !this.writeIndent()
-            !this.stringify(!value)
-        enddo
-        !this.indpt = !this.indpt - 1
-        !this.writeLf()
-        !this.writeIndent()
-        !this.write(']')
-    elseif !type eq 'DICTIONARY' then
-        !this.write('{')
-        !first = true
-        !this.indpt = !this.indpt + 1
-        do !i indices !object.keys
-            if !first then
-                !first = false
-            else
-                !this.write(',')
-            endif
-            !this.writeLf()
-            !this.writeIndent()
-            !this.stringify(!object.keys[!i])
-            !this.write(':')
-            !this.writeSpace()
-            !this.stringify(!object.values[!i])
-        enddo
-        !this.indpt = !this.indpt - 1
-        !this.writeLf()
-        !this.writeIndent()
-        !this.write('}')
-    else
-        !keys = !object.Attributes()
-        handle any
-            !this.stringify(!object.String())
-            return
-        endhandle
-        !this.write('{')
-        !first = true
-        !this.indpt = !this.indpt + 1
-        do !key values !keys
-            if !first then
-                !first = false
-            else
-                !this.write(',')
-            endif
-            !this.writeLf()
-            !this.writeIndent()
-            !this.stringify(!key.LowCase())
-            !this.write(':')
-            !this.writeSpace()
-            !this.stringify(!object.Attribute(!key))
-        enddo
-        !this.indpt = !this.indpt - 1
-        !this.writeLf()
-        !this.writeIndent()
-        !this.write('}')
+        return
     endif
+    !this.write('"')
+    !this.write(!object.Replace('\', '\\').Replace('"', '\"').Replace('	', '\t').Replace('
+', '\n'))
+    !this.write('"')
+endmethod
+
+define method .stringify(!object is BOOLEAN)
+    if !object.Unset() then
+        !this.write('null')
+        return
+    endif
+    !this.write(!object.String().LowCase())
+endmethod
+
+define method .stringify(!object is REAL)
+    if !object.Unset() then
+        !this.write('null')
+        return
+    endif
+    !this.write(!object.Value().String().Replace('EX', 'E'))
+endmethod
+
+define method .stringify(!object is DBREF)
+    if !object.Unset() then
+        !this.write('null')
+        return
+    endif
+    !this.stringify(!object.name)
+endmethod
+
+define method .stringify(!object is ARRAY)
+    if !object.Unset() then
+        !this.write('null')
+        return
+    endif
+    !this.write('[')
+    !first = true
+    !this.indpt = !this.indpt + 1
+    do !value values !object
+        if !first then
+            !first = false
+        else
+            !this.write(',')
+        endif
+        !this.writeLf()
+        !this.writeIndent()
+        !this.stringify(!value)
+    enddo
+    !this.indpt = !this.indpt - 1
+    !this.writeLf()
+    !this.writeIndent()
+    !this.write(']')
+endmethod
+
+define method .stringify(!object is DICTIONARY)
+    if !object.Unset() then
+        !this.write('null')
+        return
+    endif
+    !this.write('{')
+    !first = true
+    !this.indpt = !this.indpt + 1
+    do !i indices !object.keys
+        if !first then
+            !first = false
+        else
+            !this.write(',')
+        endif
+        !this.writeLf()
+        !this.writeIndent()
+        !this.stringify(!object.keys[!i])
+        !this.write(':')
+        !this.writeSpace()
+        !this.stringify(!object.values[!i])
+    enddo
+    !this.indpt = !this.indpt - 1
+    !this.writeLf()
+    !this.writeIndent()
+    !this.write('}')
+endmethod
+
+define method .stringify(!object is ANY)
+    if !object.Unset() then
+        !this.write('null')
+        return
+    endif
+    !keys = !object.Attributes()
+    handle any
+        !this.stringify(!object.String())
+        return
+    endhandle
+    !this.write('{')
+    !first = true
+    !this.indpt = !this.indpt + 1
+    do !key values !keys
+        if !first then
+            !first = false
+        else
+            !this.write(',')
+        endif
+        !this.writeLf()
+        !this.writeIndent()
+        !this.stringify(!key.LowCase())
+        !this.write(':')
+        !this.writeSpace()
+        !this.stringify(!object.Attribute(!key))
+    enddo
+    !this.indpt = !this.indpt - 1
+    !this.writeLf()
+    !this.writeIndent()
+    !this.write('}')
 endmethod
 
 define method .readChar() is STRING
