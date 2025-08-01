@@ -274,7 +274,6 @@ define method .parseObject(!type is STRING) is ANY
     endif
     !this.skipSpace()
     !char = !this.readChar()
-    !this.backtrack()
     if !type eq '' then
         !object = object DICTIONARY()
     else
@@ -283,6 +282,7 @@ define method .parseObject(!type is STRING) is ANY
     if !char eq '}' then
         return !object
     endif
+    !this.backtrack()
     do
         !this.skipSpace()
         !key = !this.parseString('STRING')
@@ -311,11 +311,11 @@ define method .parseArray() is ARRAY
     endif
     !this.skipSpace()
     !char = !this.readChar()
-    !this.backtrack()
     !array = object ARRAY()
     if !char eq ']' then
         return !array
     endif
+    !this.backtrack()
     do
         !array.Append(!this.parseValue(''))
         !this.skipSpace()
