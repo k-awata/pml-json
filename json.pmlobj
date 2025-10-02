@@ -293,7 +293,12 @@ define method .parseObject(!type is STRING) is ANY
         if !type inset('', 'DICTIONARY') then
             !object.setValue(!key, !this.parseValue(''), true)
         else
-            !object.$!<key> = !this.parseValue(!object.$!<key>.ObjectType())
+            !objtype = !object.Attribute(!key.Upcase()).ObjectType()
+            handle any
+                !this.parseValue('')
+            elsehandle none
+                !object.Attribute(!key.Upcase()) = !this.parseValue(!objtype)
+            endhandle
         endif
         !this.skipSpace()
         !char = !this.readChar()
