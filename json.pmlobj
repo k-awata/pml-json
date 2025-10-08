@@ -358,7 +358,11 @@ define method .parseString(!type is STRING) is ANY
     if !type inset('', 'STRING') then
         return !token
     endif
-    return object $!<type>(!token)
+    !obj = object $!<type>(!token)
+    handle any
+        !obj = object $!<type>()
+    endhandle
+    return !obj
 endmethod
 
 define method .parseNull(!type is STRING) is ANY
